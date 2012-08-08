@@ -35,6 +35,8 @@ namespace BackSub
 			GL.ClearColor(0.1f, 0.2f, 0.5f, 0.0f);
 			GL.Enable(EnableCap.DepthTest);
 			GL.Enable(EnableCap.Texture2D);
+			GL.Enable(EnableCap.CullFace);
+			GL.CullFace(CullFaceMode.Back);
 			
 			int vertexObject, fragmentObject, program;
 			CreateShaders(File.ReadAllText(GetAbsolutePath("shader.vert")), File.ReadAllText(GetAbsolutePath("shader.frag")),
@@ -119,11 +121,11 @@ namespace BackSub
 			
 			GL.Begin(BeginMode.Quads);
 			
-			GL.Color3(0.8f, 0.2f, 1.0f); GL.Vertex3(0.9f, 0.9f, 4.0f); GL.TexCoord2(1,0);
-			GL.Color3(0.2f, 0.9f, 1.0f); GL.Vertex3(-0.9f, 0.9f, 4.0f); GL.TexCoord2(1,1);
-			GL.Color3(1.0f, 1.0f, 0.0f); GL.Vertex3(-0.9f, -0.9f, 4.0f); GL.TexCoord2(0,1);
 			GL.Color3(1.0f, 0.0f, 0.0f); GL.Vertex3(0.9f, -0.9f, 4.0f); GL.TexCoord2(0,0);
-			
+			GL.Color3(1.0f, 1.0f, 0.0f); GL.Vertex3(-0.9f, -0.9f, 4.0f); GL.TexCoord2(0, 1);
+			GL.Color3(0.2f, 0.9f, 1.0f); GL.Vertex3(-0.9f, 0.9f, 4.0f); GL.TexCoord2(1, 1);
+			GL.Color3(0.8f, 0.2f, 1.0f); GL.Vertex3(0.9f, 0.9f, 4.0f); GL.TexCoord2(1, 0);
+
 			GL.End();
 			
 			GL.BindFramebuffer(FramebufferTarget.FramebufferExt,fboid);
@@ -138,11 +140,11 @@ namespace BackSub
 			renderTexture.Render();
 			
 			GL.Begin(BeginMode.Quads);
-			
-			GL.Color3(0.8f, 0.2f, 1.0f); GL.Vertex3(1.0f, 1.0f, 4.0f); GL.TexCoord2(1,0);
-			GL.Color3(0.2f, 0.9f, 1.0f); GL.Vertex3(-1.0f, 1.0f, 4.0f); GL.TexCoord2(1,1);
-			GL.Color3(1.0f, 1.0f, 0.0f); GL.Vertex3(-1.0f, -1.0f, 4.0f); GL.TexCoord2(0,1);
-			GL.Color3(1.0f, 0.0f, 0.0f); GL.Vertex3(1.0f, -1.0f, 4.0f); GL.TexCoord2(0,0);
+
+			GL.Color3(1.0f, 0.0f, 0.0f); GL.Vertex3(0.9f, -0.9f, 4.0f); GL.TexCoord2(0, 0);
+			GL.Color3(1.0f, 1.0f, 0.0f); GL.Vertex3(-0.9f, -0.9f, 4.0f); GL.TexCoord2(0, 1);
+			GL.Color3(0.2f, 0.9f, 1.0f); GL.Vertex3(-0.9f, 0.9f, 4.0f); GL.TexCoord2(1, 1);
+			GL.Color3(0.8f, 0.2f, 1.0f); GL.Vertex3(0.9f, 0.9f, 4.0f); GL.TexCoord2(1, 0);
 			
 			GL.End();
 			
