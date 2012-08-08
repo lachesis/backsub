@@ -8,8 +8,8 @@
     <ProjectGuid>{8AC674AC-026A-4BF2-87FE-1AB0A15E5FAB}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>backsub</RootNamespace>
-    <AssemblyName>backsub</AssemblyName>
+    <RootNamespace>BackSub</RootNamespace>
+    <AssemblyName>BackSub</AssemblyName>
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
@@ -38,6 +38,8 @@
     <Reference Include="System.Drawing" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="GLFrameBufferObject.cs" />
+    <Compile Include="GLShader.cs" />
     <Compile Include="GLTextureObject.cs" />
     <Compile Include="IRenderable.cs" />
     <Compile Include="Program.cs" />

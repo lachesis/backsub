@@ -10,7 +10,7 @@ using System.Drawing.Imaging;
 
 namespace BackSub
 {
-	public class GLTextureObject //: IDisposable, IRenderable
+	public class GLTextureObject : IDisposable, IRenderable
 	{
 		public int TextureId { get { return _id; } }
 		public TextureUnit TextureUnit { get; set; }

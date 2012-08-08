@@ -1,9 +1,13 @@
+F:\projects\backsub\backsub\backsub\bin\Debug\OpenTK.dll.config
+F:\projects\backsub\backsub\backsub\bin\Debug\shader.vert
+F:\projects\backsub\backsub\backsub\bin\Debug\shader.frag
+F:\projects\backsub\backsub\backsub\bin\Debug\output0106.png
+F:\projects\backsub\backsub\backsub\bin\Debug\10.gif
 F:\projects\backsub\backsub\backsub\bin\Debug\backsub.exe
 F:\projects\backsub\backsub\backsub\bin\Debug\backsub.pdb
-F:\projects\backsub\backsub\backsub\obj\x86\Debug\ResolveAssemblyReference.cache
-F:\projects\backsub\backsub\backsub\obj\x86\Debug\backsub.exe
-F:\projects\backsub\backsub\backsub\obj\x86\Debug\backsub.pdb
-F:\projects\backsub\backsub\backsub\bin\Debug\OpenTK.dll.config
 F:\projects\backsub\backsub\backsub\bin\Debug\OpenTK.dll
 F:\projects\backsub\backsub\backsub\bin\Debug\OpenTK.pdb
 F:\projects\backsub\backsub\backsub\bin\Debug\OpenTK.xml
+F:\projects\backsub\backsub\backsub\obj\x86\Debug\ResolveAssemblyReference.cache
+F:\projects\backsub\backsub\backsub\obj\x86\Debug\backsub.exe
+F:\projects\backsub\backsub\backsub\obj\x86\Debug\backsub.pdb

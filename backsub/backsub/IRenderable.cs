@@ -9,4 +9,9 @@ namespace BackSub
 	{
 		void Render();
 	}
+	public interface IRenderableBatch
+	{
+		void BeginRender();
+		void EndRender();
+	}
 }
