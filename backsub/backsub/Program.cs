@@ -1,6 +1,8 @@
 ﻿// Released to the public domain. Use, modify and relicense at will.
 
 using System;
+using System.IO;
+using System.Drawing;
 
 using OpenTK;
 using OpenTK.Graphics;
@@ -19,7 +21,10 @@ namespace BackSub
 		{
 			VSync = VSyncMode.On;
 		}
-
+		
+		int shaderProgram;
+		GLTextureObject mainTexture;
+		
 		/// <summary>Load resources here.</summary>
 		/// <param name="e">Not used.</param>
 		protected override void OnLoad(EventArgs e)
@@ -28,6 +33,28 @@ namespace BackSub
 
 			GL.ClearColor(0.1f, 0.2f, 0.5f, 0.0f);
 			GL.Enable(EnableCap.DepthTest);
+			GL.Enable(EnableCap.Texture2D);
+			
+			int vertexObject, fragmentObject, program;
+			CreateShaders(File.ReadAllText(GetAbsolutePath("shader.vert")), File.ReadAllText(GetAbsolutePath("shader.frag")),
+			              out vertexObject, out fragmentObject, out program);
+			
+			this.shaderProgram = program;
+			this.mainTexture = new GLTextureObject(new Bitmap(GetAbsolutePath("output0106.png")));
+		}
+		
+		/// <summary>
+		/// Gets the absolute path of a file relative to executing location.
+		/// </summary>
+		/// <returns>
+		/// The absolute path.
+		/// </returns>
+		/// <param name='relpath'>
+		/// Relative path 
+		/// </param>
+		string GetAbsolutePath(string relpath)
+		{
+			return Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location) + Path.DirectorySeparatorChar + relpath;
 		}
 
 		/// <summary>
@@ -73,16 +100,61 @@ namespace BackSub
 			GL.MatrixMode(MatrixMode.Modelview);
 			GL.LoadMatrix(ref modelview);
 
-			GL.Begin(BeginMode.Triangles);
-
-			GL.Color3(1.0f, 1.0f, 0.0f); GL.Vertex3(-1.0f, -1.0f, 4.0f);
-			GL.Color3(1.0f, 0.0f, 0.0f); GL.Vertex3(1.0f, -1.0f, 4.0f);
-			GL.Color3(0.2f, 0.9f, 1.0f); GL.Vertex3(0.0f, 1.0f, 4.0f);
-
+			GL.Uniform1(GL.GetUniformLocation(this.shaderProgram, "tex"), 0);
+			mainTexture.Render();
+			
+			GL.Begin(BeginMode.Quads);
+			
+			GL.Color3(0.8f, 0.2f, 1.0f); GL.Vertex3(1.0f, 1.0f, 4.0f); GL.TexCoord2(1,0);
+			GL.Color3(0.2f, 0.9f, 1.0f); GL.Vertex3(-1.0f, 1.0f, 4.0f); GL.TexCoord2(1,1);
+			GL.Color3(1.0f, 1.0f, 0.0f); GL.Vertex3(-1.0f, -1.0f, 4.0f); GL.TexCoord2(0,1);
+			GL.Color3(1.0f, 0.0f, 0.0f); GL.Vertex3(1.0f, -1.0f, 4.0f); GL.TexCoord2(0,0);
+			
 			GL.End();
 
 			SwapBuffers();
 		}
+		
+		#region CreateShaders
+		/// <summary>
+		/// Creates the shaders.
+		/// </summary>
+        void CreateShaders(string vertex_shader_source, string fragment_shader_source,
+            out int vertexObject, out int fragmentObject, 
+            out int program)
+        {
+            int status_code;
+            string info;
+
+            vertexObject = GL.CreateShader(ShaderType.VertexShader);
+            fragmentObject = GL.CreateShader(ShaderType.FragmentShader);
+
+            // Compile vertex shader
+            GL.ShaderSource(vertexObject, vertex_shader_source);
+            GL.CompileShader(vertexObject);
+            GL.GetShaderInfoLog(vertexObject, out info);
+            GL.GetShader(vertexObject, ShaderParameter.CompileStatus, out status_code);
+
+            if (status_code != 1)
+                throw new ApplicationException(info);
+
+            // Compile vertex shader
+            GL.ShaderSource(fragmentObject, fragment_shader_source);
+            GL.CompileShader(fragmentObject);
+            GL.GetShaderInfoLog(fragmentObject, out info);
+            GL.GetShader(fragmentObject, ShaderParameter.CompileStatus, out status_code);
+            
+            if (status_code != 1)
+                throw new ApplicationException(info);
+
+            program = GL.CreateProgram();
+            GL.AttachShader(program, fragmentObject);
+            GL.AttachShader(program, vertexObject);
+
+            GL.LinkProgram(program);
+            GL.UseProgram(program);
+        }
+        #endregion
 
 		/// <summary>
 		/// The main entry point for the application.

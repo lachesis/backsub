@@ -10,10 +10,12 @@ using System.Drawing.Imaging;
 
 namespace BackSub
 {
-	public class GLTextureObject : IDisposable, IRenderable
+	public class GLTextureObject //: IDisposable, IRenderable
 	{
+		public int TextureId { get { return _id; } }
 		private int _id;
-		public GLTextureObject(Bitmap bitmap) : this(bitmap, 0) { }
+				
+		public GLTextureObject(Bitmap bitmap) : this(bitmap, 1) { }
 		public GLTextureObject(Bitmap bitmap, int numMipMapLevels)
 		{
 			_id = GL.GenTexture();
@@ -73,7 +75,8 @@ namespace BackSub
 		}
 		public void Render()
 		{
-			GL.BindTexture(TextureTarget.Texture2D, _id);
+			GL.ActiveTexture(TextureUnit.Texture0);
+            GL.BindTexture(TextureTarget.Texture2D, _id);
 		}
 	}
 }
