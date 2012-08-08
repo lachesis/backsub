@@ -24,7 +24,8 @@ namespace BackSub
 		
 		int shaderProgram;
 		GLTextureObject mainTexture;
-		
+		GLTextureObject renderTexture;
+		int fboid; 
 		/// <summary>Load resources here.</summary>
 		/// <param name="e">Not used.</param>
 		protected override void OnLoad(EventArgs e)
@@ -41,6 +42,18 @@ namespace BackSub
 			
 			this.shaderProgram = program;
 			this.mainTexture = new GLTextureObject(new Bitmap(GetAbsolutePath("output0106.png")));
+			this.mainTexture.TextureUnit = TextureUnit.Texture0;
+			
+			this.renderTexture = new GLTextureObject(new Bitmap(GetAbsolutePath("output0106.png")));
+			this.renderTexture.TextureUnit = TextureUnit.Texture1;
+			this.renderTexture.Render();
+			fboid = GL.GenFramebuffer();
+			GL.BindFramebuffer(FramebufferTarget.FramebufferExt,fboid);
+			GL.FramebufferTexture2D(FramebufferTarget.FramebufferExt,FramebufferAttachment.ColorAttachment0Ext,
+			                        TextureTarget.Texture2D,this.renderTexture.TextureId,0);
+			GL.DrawBuffer((DrawBufferMode)FramebufferAttachment.ColorAttachment0Ext);
+			
+			//var newTexture = new GLTextureObject(new Bitmap(GetAbsolutePath("10.gif")));
 		}
 		
 		/// <summary>
@@ -93,15 +106,36 @@ namespace BackSub
 		protected override void OnRenderFrame(FrameEventArgs e)
 		{
 			base.OnRenderFrame(e);
-
+			
+			GL.ClearColor(0.1f, 0.2f, 0.5f, 0.0f);
 			GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
 			Matrix4 modelview = Matrix4.LookAt(Vector3.Zero, Vector3.UnitZ, Vector3.UnitY);
 			GL.MatrixMode(MatrixMode.Modelview);
 			GL.LoadMatrix(ref modelview);
 
-			GL.Uniform1(GL.GetUniformLocation(this.shaderProgram, "tex"), 0);
+			GL.Uniform1(GL.GetUniformLocation(this.shaderProgram, "texture0"), mainTexture.TextureUnit - TextureUnit.Texture0);
 			mainTexture.Render();
+			
+			GL.Begin(BeginMode.Quads);
+			
+			GL.Color3(0.8f, 0.2f, 1.0f); GL.Vertex3(0.9f, 0.9f, 4.0f); GL.TexCoord2(1,0);
+			GL.Color3(0.2f, 0.9f, 1.0f); GL.Vertex3(-0.9f, 0.9f, 4.0f); GL.TexCoord2(1,1);
+			GL.Color3(1.0f, 1.0f, 0.0f); GL.Vertex3(-0.9f, -0.9f, 4.0f); GL.TexCoord2(0,1);
+			GL.Color3(1.0f, 0.0f, 0.0f); GL.Vertex3(0.9f, -0.9f, 4.0f); GL.TexCoord2(0,0);
+			
+			GL.End();
+			
+			GL.BindFramebuffer(FramebufferTarget.FramebufferExt,fboid);
+			GL.DrawBuffer((DrawBufferMode)FramebufferAttachment.ColorAttachment0Ext);
+			
+			GL.BindFramebuffer(FramebufferTarget.FramebufferExt,0);
+			
+			GL.ClearColor(0.0f, 1.0f, 0.0f, 0.0f);
+			GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
+			
+			GL.Uniform1(GL.GetUniformLocation(this.shaderProgram, "texture0"), renderTexture.TextureUnit - TextureUnit.Texture0);
+			renderTexture.Render();
 			
 			GL.Begin(BeginMode.Quads);
 			
@@ -111,7 +145,7 @@ namespace BackSub
 			GL.Color3(1.0f, 0.0f, 0.0f); GL.Vertex3(1.0f, -1.0f, 4.0f); GL.TexCoord2(0,0);
 			
 			GL.End();
-
+			
 			SwapBuffers();
 		}
 		
