@@ -22,28 +22,33 @@ namespace BackSub
 		attach textures to different color attachments
 		use glDrawBuffer() to switch rendering to different color attachments
 	 */
-	public class GLFrameBufferObject : IRenderableBatch, IDisposable
+	public class GLFrameBufferObject : IRenderable, IDisposable
 	{
 		public readonly int FramebufferId;
 		private bool _validated;
-		public readonly Size Size;
-		public GLFrameBufferObject(int width, int height)
+		public Rectangle Viewport { get; protected set; }
+		public GLFrameBufferObject(Rectangle viewport)
 		{
-			Size = new Size(width, height);
+			Viewport = viewport;
 			_validated = false;
 			DrawBuffer = FramebufferAttachment.ColorAttachment0Ext;
 			FramebufferId = GL.GenFramebuffer();
 			GL.BindFramebuffer(FramebufferTarget.FramebufferExt, FramebufferId);
 		}
+		
+		/// <summary>
+		/// protected constructor that does nothing
+		/// </summary>
+		protected GLFrameBufferObject() { }
 
-		public void AttachTexture2D(FramebufferAttachment attachmentPoint, int textureId)
+		public virtual void AttachTexture2D(FramebufferAttachment attachmentPoint, int textureId)
 		{
 			_validated = false;
 			GL.BindFramebuffer(FramebufferTarget.FramebufferExt, FramebufferId);
 			GL.FramebufferTexture2D(FramebufferTarget.FramebufferExt, attachmentPoint, TextureTarget.Texture2D, textureId, 0);
 		}
 
-		public void AttachRenderbuffer(FramebufferAttachment attachmentPoint, int renderbufferId)
+		public virtual void AttachRenderbuffer(FramebufferAttachment attachmentPoint, int renderbufferId)
 		{
 			_validated = false;
 			GL.BindFramebuffer(FramebufferTarget.FramebufferExt, FramebufferId);
@@ -69,22 +74,6 @@ namespace BackSub
 		/// </summary>
 		public FramebufferAttachment DrawBuffer { get; set; }
 
-		public void BeginRender()
-		{
-			GL.BindFramebuffer(FramebufferTarget.FramebufferExt, FramebufferId);
-			Validate(false);
-			GL.DrawBuffer((DrawBufferMode)DrawBuffer);
-			GL.PushAttrib(AttribMask.ViewportBit); // stores GL.Viewport() parameters
-			GL.Viewport(0, 0, Size.Width, Size.Height);
-		}
-
-		public void EndRender()
-		{
-			GL.PopAttrib(); // restores GL.Viewport() parameters
-			GL.BindFramebuffer(FramebufferTarget.FramebufferExt, 0); // return to visible framebuffer
-			GL.DrawBuffer(DrawBufferMode.Back);
-		}
-
 		protected virtual void Dispose(bool disposing)
 		{
 			if (GraphicsContext.CurrentContext != null)
@@ -100,6 +89,41 @@ namespace BackSub
 		~GLFrameBufferObject()
 		{
 			Dispose(false);
+		}
+
+		public virtual void Render()
+		{
+			GL.BindFramebuffer(FramebufferTarget.FramebufferExt, FramebufferId);
+			Validate(false);
+			GL.DrawBuffer((DrawBufferMode)DrawBuffer);
+			GL.Viewport(Viewport.X, Viewport.Y, Viewport.Width, Viewport.Height);
+		}
+	}
+
+	public class GLVisibleFrameBufferObject : GLFrameBufferObject
+	{
+		public GLVisibleFrameBufferObject(Rectangle viewport)
+		{
+			Viewport = viewport;
+			GL.BindFramebuffer(FramebufferTarget.FramebufferExt, 0);
+		}
+		public override void Render()
+		{
+			GL.BindFramebuffer(FramebufferTarget.FramebufferExt, 0); // return to visible framebuffer
+			GL.DrawBuffer(DrawBufferMode.Back);
+			GL.Viewport(Viewport.X, Viewport.Y, Viewport.Width, Viewport.Height);
+		}
+
+		protected override void Dispose(bool disposing) { }
+
+		public override void AttachRenderbuffer(FramebufferAttachment attachmentPoint, int renderbufferId)
+		{
+			throw new System.InvalidOperationException();
+		}
+
+		public override void AttachTexture2D(FramebufferAttachment attachmentPoint, int textureId)
+		{
+			throw new System.InvalidOperationException();
 		}
 	}
 }

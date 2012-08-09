@@ -26,6 +26,7 @@ namespace BackSub
 		GLTextureObject mainTexture;
 		GLTextureObject renderTexture;
 		GLFrameBufferObject fbo;
+		GLVisibleFrameBufferObject visibleFbo;
 		/// <summary>Load resources here.</summary>
 		/// <param name="e">Not used.</param>
 		protected override void OnLoad(EventArgs e)
@@ -46,11 +47,14 @@ namespace BackSub
 			this.renderTexture = new GLTextureObject(new Bitmap(GetAbsolutePath("output0106.png")));
 			this.renderTexture.TextureUnit = TextureUnit.Texture1;
 
-			fbo = new GLFrameBufferObject(512, 512);
+			fbo = new GLFrameBufferObject(new Rectangle(0,0,512,512));
 			fbo.DrawBuffer = FramebufferAttachment.ColorAttachment0;
 			fbo.AttachTexture2D(FramebufferAttachment.ColorAttachment0, this.renderTexture.TextureId);
 			fbo.Validate(true);
-			GL.BindFramebuffer(FramebufferTarget.FramebufferExt, 0); // return to visible framebuffer
+
+			visibleFbo = new GLVisibleFrameBufferObject(new Rectangle(0, 0, 512, 512));
+			visibleFbo.Render();
+
 		}
 		
 		/// <summary>
@@ -114,10 +118,11 @@ namespace BackSub
 			GL.ClearColor(0.1f, 0.2f, 0.5f, 0.0f);
 			GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
-			mainTexture.Render();
+			this.fbo.Render();
+
+			this.mainTexture.Render();
 			this.shader.SetUniform("texture0", mainTexture.TextureUnit);
 			this.shader.SetUniform("renderColor", 1);
-			this.fbo.BeginRender();
 
 			GL.Begin(BeginMode.Quads);
 
@@ -128,7 +133,7 @@ namespace BackSub
 
 			GL.End();
 
-			this.fbo.EndRender();
+			this.visibleFbo.Render();
 
 			//Render texture to screen
 			GL.ClearColor(0.0f, 1.0f, 0.0f, 0.0f);
