@@ -71,6 +71,7 @@ namespace BackSub
 
 		public void BeginRender()
 		{
+			GL.BindFramebuffer(FramebufferTarget.FramebufferExt, FramebufferId);
 			Validate(false);
 			GL.DrawBuffer((DrawBufferMode)DrawBuffer);
 			GL.PushAttrib(AttribMask.ViewportBit); // stores GL.Viewport() parameters

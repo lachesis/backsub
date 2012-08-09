@@ -17,15 +17,15 @@ namespace BackSub
 	{
 		/// <summary>Creates a 800x600 window with the specified title.</summary>
 		public Game()
-			: base(800, 600, GraphicsMode.Default, "OpenTK Quick Start Sample")
+			: base(512, 512, GraphicsMode.Default, "OpenTK Quick Start Sample")
 		{
 			VSync = VSyncMode.On;
 		}
-		
-		int shaderProgram;
+
+		GLShader shader;
 		GLTextureObject mainTexture;
 		GLTextureObject renderTexture;
-		int fboid; 
+		GLFrameBufferObject fbo;
 		/// <summary>Load resources here.</summary>
 		/// <param name="e">Not used.</param>
 		protected override void OnLoad(EventArgs e)
@@ -37,25 +37,20 @@ namespace BackSub
 			GL.Enable(EnableCap.Texture2D);
 			GL.Enable(EnableCap.CullFace);
 			GL.CullFace(CullFaceMode.Back);
-			
-			int vertexObject, fragmentObject, program;
-			CreateShaders(File.ReadAllText(GetAbsolutePath("shader.vert")), File.ReadAllText(GetAbsolutePath("shader.frag")),
-			              out vertexObject, out fragmentObject, out program);
-			
-			this.shaderProgram = program;
+
+			this.shader = new GLShader(File.ReadAllText(GetAbsolutePath("shader.vert")), File.ReadAllText(GetAbsolutePath("shader.frag")));
+
 			this.mainTexture = new GLTextureObject(new Bitmap(GetAbsolutePath("output0106.png")));
 			this.mainTexture.TextureUnit = TextureUnit.Texture0;
 			
 			this.renderTexture = new GLTextureObject(new Bitmap(GetAbsolutePath("output0106.png")));
 			this.renderTexture.TextureUnit = TextureUnit.Texture1;
-			this.renderTexture.Render();
-			fboid = GL.GenFramebuffer();
-			GL.BindFramebuffer(FramebufferTarget.FramebufferExt,fboid);
-			GL.FramebufferTexture2D(FramebufferTarget.FramebufferExt,FramebufferAttachment.ColorAttachment0Ext,
-			                        TextureTarget.Texture2D,this.renderTexture.TextureId,0);
-			GL.DrawBuffer((DrawBufferMode)FramebufferAttachment.ColorAttachment0Ext);
-			
-			//var newTexture = new GLTextureObject(new Bitmap(GetAbsolutePath("10.gif")));
+
+			fbo = new GLFrameBufferObject(512, 512);
+			fbo.DrawBuffer = FramebufferAttachment.ColorAttachment0;
+			fbo.AttachTexture2D(FramebufferAttachment.ColorAttachment0, this.renderTexture.TextureId);
+			fbo.Validate(true);
+			GL.BindFramebuffer(FramebufferTarget.FramebufferExt, 0); // return to visible framebuffer
 		}
 		
 		/// <summary>
@@ -82,9 +77,10 @@ namespace BackSub
 		{
 			base.OnResize(e);
 
-			GL.Viewport(ClientRectangle.X, ClientRectangle.Y, ClientRectangle.Width, ClientRectangle.Height);
+			//GL.Viewport(ClientRectangle.X, ClientRectangle.Y, ClientRectangle.Width, ClientRectangle.Height);
 
-			Matrix4 projection = Matrix4.CreatePerspectiveFieldOfView((float)Math.PI / 4, Width / (float)Height, 1.0f, 64.0f);
+			//Matrix4 projection = Matrix4.CreatePerspectiveFieldOfView((float)Math.PI / 4, Width / (float)Height, 1.0f, 64.0f);
+			Matrix4 projection = Matrix4.CreateOrthographicOffCenter(-1, 1, -1, 1, 1, 64);
 			GL.MatrixMode(MatrixMode.Projection);
 			GL.LoadMatrix(ref projection);
 		}
@@ -98,9 +94,9 @@ namespace BackSub
 			base.OnUpdateFrame(e);
 
 			if (Keyboard[Key.Escape])
+
 				Exit();
 		}
-
 		/// <summary>
 		/// Called when it is time to render the next frame. Add your rendering code here.
 		/// </summary>
@@ -108,89 +104,51 @@ namespace BackSub
 		protected override void OnRenderFrame(FrameEventArgs e)
 		{
 			base.OnRenderFrame(e);
-			
-			GL.ClearColor(0.1f, 0.2f, 0.5f, 0.0f);
-			GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
-			Matrix4 modelview = Matrix4.LookAt(Vector3.Zero, Vector3.UnitZ, Vector3.UnitY);
+			//Matrix4 modelview = Matrix4.LookAt(Vector3.Zero, Vector3.UnitZ, Vector3.UnitY);
+			Matrix4 modelview = Matrix4.Identity;
 			GL.MatrixMode(MatrixMode.Modelview);
 			GL.LoadMatrix(ref modelview);
 
-			GL.Uniform1(GL.GetUniformLocation(this.shaderProgram, "texture0"), mainTexture.TextureUnit - TextureUnit.Texture0);
+			//Render texture to texture
+			GL.ClearColor(0.1f, 0.2f, 0.5f, 0.0f);
+			GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
+
 			mainTexture.Render();
-			
+			this.shader.SetUniform("texture0", mainTexture.TextureUnit);
+			this.shader.SetUniform("renderColor", 1);
+			this.fbo.BeginRender();
+
 			GL.Begin(BeginMode.Quads);
-			
-			GL.Color3(1.0f, 0.0f, 0.0f); GL.Vertex3(0.9f, -0.9f, 4.0f); GL.TexCoord2(0,0);
-			GL.Color3(1.0f, 1.0f, 0.0f); GL.Vertex3(-0.9f, -0.9f, 4.0f); GL.TexCoord2(0, 1);
-			GL.Color3(0.2f, 0.9f, 1.0f); GL.Vertex3(-0.9f, 0.9f, 4.0f); GL.TexCoord2(1, 1);
-			GL.Color3(0.8f, 0.2f, 1.0f); GL.Vertex3(0.9f, 0.9f, 4.0f); GL.TexCoord2(1, 0);
+
+			GL.TexCoord2(0, 0);  GL.Color3(0.0f, 0.0f, 0.0f); GL.Vertex3(-0.9f, -0.9f, -4.0f);
+			GL.TexCoord2(1, 0);  GL.Color3(1.0f, 0.0f, 0.0f); GL.Vertex3(0.9f, -0.9f, -4.0f);
+			GL.TexCoord2(1, 1);  GL.Color3(0.0f, 1.0f, 0.0f); GL.Vertex3(0.9f, 0.9f, -4.0f);
+			GL.TexCoord2(0, 1);  GL.Color3(0.0f, 0.0f, 1.0f); GL.Vertex3(-0.9f, 0.9f, -4.0f);
 
 			GL.End();
-			
-			GL.BindFramebuffer(FramebufferTarget.FramebufferExt,fboid);
-			GL.DrawBuffer((DrawBufferMode)FramebufferAttachment.ColorAttachment0Ext);
-			
-			GL.BindFramebuffer(FramebufferTarget.FramebufferExt,0);
-			
+
+			this.fbo.EndRender();
+
+			//Render texture to screen
 			GL.ClearColor(0.0f, 1.0f, 0.0f, 0.0f);
 			GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 			
-			GL.Uniform1(GL.GetUniformLocation(this.shaderProgram, "texture0"), renderTexture.TextureUnit - TextureUnit.Texture0);
 			renderTexture.Render();
+			this.shader.SetUniform("texture0", renderTexture.TextureUnit);
+			this.shader.SetUniform("renderColor", 0);
 			
 			GL.Begin(BeginMode.Quads);
 
-			GL.Color3(1.0f, 0.0f, 0.0f); GL.Vertex3(0.9f, -0.9f, 4.0f); GL.TexCoord2(0, 0);
-			GL.Color3(1.0f, 1.0f, 0.0f); GL.Vertex3(-0.9f, -0.9f, 4.0f); GL.TexCoord2(0, 1);
-			GL.Color3(0.2f, 0.9f, 1.0f); GL.Vertex3(-0.9f, 0.9f, 4.0f); GL.TexCoord2(1, 1);
-			GL.Color3(0.8f, 0.2f, 1.0f); GL.Vertex3(0.9f, 0.9f, 4.0f); GL.TexCoord2(1, 0);
+			GL.TexCoord2(0, 0);  GL.Color3(0.0f, 0.0f, 0.0f); GL.Vertex3(-0.9f, -0.9f, -4.0f);
+			GL.TexCoord2(1, 0);  GL.Color3(1.0f, 0.0f, 0.0f); GL.Vertex3(0.9f, -0.9f, -4.0f);
+			GL.TexCoord2(1, 1);  GL.Color3(0.0f, 1.0f, 0.0f); GL.Vertex3(0.9f, 0.9f, -4.0f);
+			GL.TexCoord2(0, 1);  GL.Color3(0.0f, 0.0f, 1.0f); GL.Vertex3(-0.9f, 0.9f, -4.0f);
 			
 			GL.End();
 			
 			SwapBuffers();
 		}
-		
-		#region CreateShaders
-		/// <summary>
-		/// Creates the shaders.
-		/// </summary>
-        void CreateShaders(string vertex_shader_source, string fragment_shader_source,
-            out int vertexObject, out int fragmentObject, 
-            out int program)
-        {
-            int status_code;
-            string info;
-
-            vertexObject = GL.CreateShader(ShaderType.VertexShader);
-            fragmentObject = GL.CreateShader(ShaderType.FragmentShader);
-
-            // Compile vertex shader
-            GL.ShaderSource(vertexObject, vertex_shader_source);
-            GL.CompileShader(vertexObject);
-            GL.GetShaderInfoLog(vertexObject, out info);
-            GL.GetShader(vertexObject, ShaderParameter.CompileStatus, out status_code);
-
-            if (status_code != 1)
-                throw new ApplicationException(info);
-
-            // Compile vertex shader
-            GL.ShaderSource(fragmentObject, fragment_shader_source);
-            GL.CompileShader(fragmentObject);
-            GL.GetShaderInfoLog(fragmentObject, out info);
-            GL.GetShader(fragmentObject, ShaderParameter.CompileStatus, out status_code);
-            
-            if (status_code != 1)
-                throw new ApplicationException(info);
-
-            program = GL.CreateProgram();
-            GL.AttachShader(program, fragmentObject);
-            GL.AttachShader(program, vertexObject);
-
-            GL.LinkProgram(program);
-            GL.UseProgram(program);
-        }
-        #endregion
 
 		/// <summary>
 		/// The main entry point for the application.

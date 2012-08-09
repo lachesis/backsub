@@ -26,7 +26,7 @@ namespace BackSub
 			GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureBaseLevel, 0);
 			GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMaxLevel, numMipMapLevels - 1);
 			Size currentSize = new Size(bitmap.Width, bitmap.Height);
-			Bitmap currentBitmap = new Bitmap(bitmap);
+			Bitmap currentBitmap = flipAndRotate(bitmap); //bitmaps coordinate system does not match opengl's coordinate system
 			for (int i = 0; i < numMipMapLevels; i++)
 			{
 				//Load currentBitmap
@@ -45,6 +45,13 @@ namespace BackSub
 
 			GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.NearestMipmapLinear);
 			GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
+		}
+
+		private static Bitmap flipAndRotate(Bitmap source)
+		{
+			Bitmap dest = new Bitmap(source);
+			dest.RotateFlip(RotateFlipType.RotateNoneFlipY);
+			return dest;
 		}
 
 		private static Bitmap scaleBitmap(Bitmap source, Size outSize)

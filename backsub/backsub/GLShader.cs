@@ -30,10 +30,12 @@ namespace BackSub
 		#region SetUniform
 		public void SetUniform(string name, int value)
 		{
+			GL.UseProgram(ProgramId);
 			GL.Uniform1(GetUniformLocation(name), value);
 		}
 		public void SetUniform(string name, double value)
 		{
+			GL.UseProgram(ProgramId);
 			GL.Uniform1(GetUniformLocation(name), value);
 		}
 		/// <summary>
@@ -82,7 +84,7 @@ namespace BackSub
 			GL.AttachShader(programId, vertexShaderId);
 
 			GL.LinkProgram(programId);
-			//GL.UseProgram(program);
+			GL.UseProgram(programId);
 		}
 
 		protected virtual void Dispose(bool disposing)
