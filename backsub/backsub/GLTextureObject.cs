@@ -10,15 +10,22 @@ using System.Drawing.Imaging;
 
 namespace BackSub
 {
-	public class GLTextureObject : IDisposable, IRenderable
+	public class GLTextureObject : IDisposable, IBindable
 	{
 		public int TextureId { get { return _id; } }
 		public TextureUnit TextureUnit { get; set; }
 		private int _id;
-		
-		public GLTextureObject(Bitmap bitmap) : this(bitmap, 1) { }
-		public GLTextureObject(Bitmap bitmap, int numMipMapLevels)
+
+		public GLTextureObject(Size size) : this(size, null, 1) { }
+		public GLTextureObject(Bitmap bitmap) : this(null, bitmap, 1) { }
+		public GLTextureObject(Bitmap bitmap, int numMipMapLevels) : this(null, bitmap, numMipMapLevels) { }
+		private GLTextureObject(Size? size, Bitmap bitmap, int numMipMapLevels)
 		{
+			if (size != null && bitmap != null) throw new ArgumentException("Can not pass size and bitmap!");
+			if (size != null)
+			{
+				bitmap = makeBitmap(size.Value);
+			}
 			_id = GL.GenTexture();
 			this.TextureUnit = TextureUnit.Texture0;
 			GL.ActiveTexture(this.TextureUnit);
@@ -35,6 +42,7 @@ namespace BackSub
 					ImageLockMode.ReadOnly, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
 				GL.TexImage2D(TextureTarget.Texture2D, i, PixelInternalFormat.Rgba, currentSize.Width, currentSize.Height, 0,
 					OpenTK.Graphics.OpenGL.PixelFormat.Bgra, PixelType.UnsignedByte, currentData.Scan0);
+
 				currentBitmap.UnlockBits(currentData);
 				//Prepare for next iteration
 				currentSize = new Size(currentSize.Width / 2, currentSize.Height / 2);
@@ -46,6 +54,11 @@ namespace BackSub
 
 			GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.NearestMipmapLinear);
 			GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
+
+			if (size != null)
+			{
+				bitmap.Dispose();
+			}
 		}
 
 		private static Bitmap scaleBitmap(Bitmap source, Size outSize)
@@ -57,6 +70,18 @@ namespace BackSub
 				graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
 				graphics.DrawImage(source, 0, 0, dest.Width, dest.Height);
 				//graphics.FillRegion(new SolidBrush(Color.FromArgb(255 / 4, 255, 0, 0)), new Region(new Rectangle(0, 0, dest.Width, dest.Height)));
+			}
+			return dest;
+		}
+
+		private static Bitmap makeBitmap(Size size)
+		{
+			Bitmap dest = new Bitmap(size.Width, size.Height);
+			using (Graphics graphics = Graphics.FromImage(dest))
+			{
+				graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+				graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
+				graphics.DrawRectangle(new Pen(new SolidBrush(Color.Black)), 0, 0, size.Width, size.Height);
 			}
 			return dest;
 		}
@@ -77,7 +102,7 @@ namespace BackSub
 		{
 			Dispose(false);
 		}
-		public void Render()
+		public void Bind()
 		{
 			GL.ActiveTexture(this.TextureUnit);
             GL.BindTexture(TextureTarget.Texture2D, _id);

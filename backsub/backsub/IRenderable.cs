@@ -5,13 +5,8 @@ using System.Text;
 
 namespace BackSub
 {
-	public interface IRenderable
+	public interface IBindable
 	{
-		void Render();
-	}
-	public interface IRenderableBatch
-	{
-		void BeginRender();
-		void EndRender();
+		void Bind();
 	}
 }

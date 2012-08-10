@@ -22,7 +22,7 @@ namespace BackSub
 		attach textures to different color attachments
 		use glDrawBuffer() to switch rendering to different color attachments
 	 */
-	public class GLFrameBufferObject : IRenderable, IDisposable
+	public class GLFrameBufferObject : IBindable, IDisposable
 	{
 		public readonly int FramebufferId;
 		private bool _validated;
@@ -91,7 +91,7 @@ namespace BackSub
 			Dispose(false);
 		}
 
-		public virtual void Render()
+		public virtual void Bind()
 		{
 			GL.BindFramebuffer(FramebufferTarget.FramebufferExt, FramebufferId);
 			Validate(false);
@@ -107,7 +107,7 @@ namespace BackSub
 			Viewport = viewport;
 			GL.BindFramebuffer(FramebufferTarget.FramebufferExt, 0);
 		}
-		public override void Render()
+		public override void Bind()
 		{
 			GL.BindFramebuffer(FramebufferTarget.FramebufferExt, 0); // return to visible framebuffer
 			GL.DrawBuffer(DrawBufferMode.Back);

@@ -7,7 +7,7 @@ using OpenTK.Graphics;
 
 namespace BackSub
 {
-	public class GLShader : IRenderable, IDisposable
+	public class GLShader : IBindable, IDisposable
 	{
 		public readonly int VertexShaderId;
 		public readonly int FragmentShaderId;
@@ -17,7 +17,7 @@ namespace BackSub
 			CreateShader(vertexShaderSource, fragmentShaderSource, out VertexShaderId, out FragmentShaderId, out ProgramId);
 		}
 
-		public void Render()
+		public void Bind()
 		{
 			GL.UseProgram(ProgramId);
 		}
@@ -34,6 +34,11 @@ namespace BackSub
 			GL.Uniform1(GetUniformLocation(name), value);
 		}
 		public void SetUniform(string name, double value)
+		{
+			GL.UseProgram(ProgramId);
+			GL.Uniform1(GetUniformLocation(name), value);
+		}
+		public void SetUniform(string name, float value)
 		{
 			GL.UseProgram(ProgramId);
 			GL.Uniform1(GetUniformLocation(name), value);

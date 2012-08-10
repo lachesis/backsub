@@ -11,3 +11,5 @@ F:\projects\backsub\backsub\backsub\bin\Debug\OpenTK.xml
 F:\projects\backsub\backsub\backsub\obj\x86\Debug\ResolveAssemblyReference.cache
 F:\projects\backsub\backsub\backsub\obj\x86\Debug\BackSub.exe
 F:\projects\backsub\backsub\backsub\obj\x86\Debug\BackSub.pdb
+F:\projects\backsub\backsub\backsub\bin\Debug\calibrate.frag
+F:\projects\backsub\backsub\backsub\bin\Debug\black.png

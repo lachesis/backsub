@@ -23,9 +23,8 @@ namespace BackSub
 		}
 
 		GLShader shader;
-		GLTextureObject mainTexture;
-		GLTextureObject renderTexture;
-		GLFrameBufferObject fbo;
+		GLTextureObject inputTex;
+		TextureManager texManager;
 		GLVisibleFrameBufferObject visibleFbo;
 		/// <summary>Load resources here.</summary>
 		/// <param name="e">Not used.</param>
@@ -39,21 +38,15 @@ namespace BackSub
 			GL.Enable(EnableCap.CullFace);
 			GL.CullFace(CullFaceMode.Back);
 
-			this.shader = new GLShader(File.ReadAllText(GetAbsolutePath("shader.vert")), File.ReadAllText(GetAbsolutePath("shader.frag")));
+			this.shader = new GLShader(File.ReadAllText(GetAbsolutePath("shader.vert")), File.ReadAllText(GetAbsolutePath("calibrate.frag")));
 
-			this.mainTexture = new GLTextureObject(new Bitmap(GetAbsolutePath("output0106.png")));
-			this.mainTexture.TextureUnit = TextureUnit.Texture0;
-			
-			this.renderTexture = new GLTextureObject(new Bitmap(GetAbsolutePath("output0106.png")));
-			this.renderTexture.TextureUnit = TextureUnit.Texture1;
+			this.inputTex = new GLTextureObject(new Bitmap(GetAbsolutePath("output0106.png")));
+			this.inputTex.TextureUnit = TextureUnit.Texture0;
 
-			fbo = new GLFrameBufferObject(new Rectangle(0,0,512,512));
-			fbo.DrawBuffer = FramebufferAttachment.ColorAttachment0;
-			fbo.AttachTexture2D(FramebufferAttachment.ColorAttachment0, this.renderTexture.TextureId);
-			fbo.Validate(true);
+			texManager = new TextureManager(new Rectangle(0, 0, 512, 512), new string[] { "Sum", "SumSq", "StdDev" });
 
 			visibleFbo = new GLVisibleFrameBufferObject(new Rectangle(0, 0, 512, 512));
-			visibleFbo.Render();
+			visibleFbo.Bind();
 
 		}
 		
@@ -115,14 +108,16 @@ namespace BackSub
 			GL.LoadMatrix(ref modelview);
 
 			//Render texture to texture
-			GL.ClearColor(0.1f, 0.2f, 0.5f, 0.0f);
-			GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
+			this.texManager.Bind();
+			
+			GL.ClearColor(0.0f, 0.0f, 1.0f, 0.0f);
+			GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);	
 
-			this.fbo.Render();
-
-			this.mainTexture.Render();
-			this.shader.SetUniform("texture0", mainTexture.TextureUnit);
-			this.shader.SetUniform("renderColor", 1);
+			this.inputTex.Bind();
+			this.shader.SetUniform("FrameTx", inputTex.TextureUnit);
+			this.shader.SetUniform("SumTx", texManager.GetTexture("Sum").TextureUnit);
+			this.shader.SetUniform("Mode", 1);
+			this.shader.SetUniform("NumFrames", 1.0f);
 
 			GL.Begin(BeginMode.Quads);
 
@@ -133,15 +128,18 @@ namespace BackSub
 
 			GL.End();
 
-			this.visibleFbo.Render();
+			texManager.EndRender("Sum");
+
+			this.visibleFbo.Bind();
 
 			//Render texture to screen
 			GL.ClearColor(0.0f, 1.0f, 0.0f, 0.0f);
 			GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
-			
-			renderTexture.Render();
-			this.shader.SetUniform("texture0", renderTexture.TextureUnit);
-			this.shader.SetUniform("renderColor", 0);
+
+			this.texManager.GetTexture("Sum").Bind();
+			this.shader.SetUniform("FrameTx", texManager.GetTexture("Sum").TextureUnit);
+			this.shader.SetUniform("Mode", 0);
+			//this.shader.SetUniform("NumFrames", 1.0f);
 			
 			GL.Begin(BeginMode.Quads);
 
