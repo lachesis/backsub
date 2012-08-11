@@ -10,53 +10,54 @@ namespace BackSub
 	public class TextureManager : IBindable
 	{
 		public GLFrameBufferObject Fbo;
-		private List<GLTextureObject> textures = new List<GLTextureObject>();
-		private Dictionary<string, int> textureNames = new Dictionary<string, int>();
+		//This Dictionary should never change. "texo" should always point to TextureUnit.Texture0
+		private readonly Dictionary<string, TextureUnit> textureNames = new Dictionary<string, TextureUnit>();
+		//The same TextureUnit will not always be assocated with the same texture
+		private readonly Dictionary<string, KeyValuePair<GLTextureObject, FramebufferAttachment>> textures = new Dictionary<string, KeyValuePair<GLTextureObject, FramebufferAttachment>>();
 		
 		public TextureManager(Rectangle viewport, IEnumerable<string> textureNames)
 		{
 			Fbo = new GLFrameBufferObject(viewport);
-			Fbo.DrawBuffer = FramebufferAttachment.ColorAttachment0 + textureNames.ToList().Count - 1;
+			List<string> texNames = textureNames.ToList();
+			texNames.Add("scratch");
+			GLTextureObject curr;
+			for (int i = 0; i < texNames.Count; i++)
 			{
-				GLTextureObject curr;
-				List<string> texNames = textureNames.ToList();
-				texNames.Add("scratch");
-				for (int i = 0; i < texNames.Count; i++)
-				{
-					curr = new GLTextureObject(viewport.Size);
-					curr.TextureUnit = TextureUnit.Texture0 + i;
-					textures.Add(curr);
-					this.textureNames.Add(texNames[i], i);
-					Fbo.AttachTexture2D(FramebufferAttachment.ColorAttachment0 + i, curr.TextureId);
-				}
+				this.textureNames.Add(texNames[i], TextureUnit.Texture0 + i);
+				curr = new GLTextureObject(viewport.Size);
+				curr.TextureUnit = TextureUnit.Texture0 + i;
+				this.textures.Add(texNames[i], new KeyValuePair<GLTextureObject, FramebufferAttachment>(curr, FramebufferAttachment.ColorAttachment0 + i));
+				Fbo.AttachTexture2D(FramebufferAttachment.ColorAttachment0 + i, curr.TextureId);
+				Fbo.DrawBuffer = FramebufferAttachment.ColorAttachment0 + i;
 			}
 			Fbo.Validate(true);
 		}
 
 		public GLTextureObject GetTexture(string textureName)
 		{
-			return textures[textureNames[textureName]];
+			return textures[textureName].Key;
 		}
 
 		public void Bind()
 		{
 			Fbo.Bind();
 			foreach (var tex in textures)
-				tex.Bind();
+				tex.Value.Key.Bind();
 		}
 
 		public void EndRender(string textureName)
 		{
-			/*var temptu = textures[textureNames["scratch"]].TextureUnit;
-			textures[textureNames["scratch"]].TextureUnit = textures[textureNames[textureName]].TextureUnit;
-			textures[textureNames[textureName]].TextureUnit = temptu;*/
-
-			var temp = textureNames["scratch"];
-			textureNames["scratch"] = textureNames[textureName];
-			textureNames[textureName] = temp;
-			
-			Fbo.DrawBuffer = FramebufferAttachment.ColorAttachment0 + textureNames["scratch"];
-			this.Bind();
+			//First have to swap the texture unit so that the shaders are bound to the right shader location
+			var tempTexUnit = textures["scratch"].Key.TextureUnit;
+			textures["scratch"].Key.TextureUnit = textures[textureName].Key.TextureUnit;
+			textures[textureName].Key.TextureUnit = tempTexUnit;
+			//second have to swap the actual texture so that lookup in textures dict is correct
+			var tempTex = textures["scratch"];
+			textures["scratch"] = textures[textureName];
+			textures[textureName] = tempTex;
+			//Bind it to make everthing active
+			Fbo.DrawBuffer = textures["scratch"].Value;
+			Bind();
 		}
 	}
 }

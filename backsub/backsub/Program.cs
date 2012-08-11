@@ -41,7 +41,7 @@ namespace BackSub
 			this.shader = new GLShader(File.ReadAllText(GetAbsolutePath("shader.vert")), File.ReadAllText(GetAbsolutePath("calibrate.frag")));
 
 			this.inputTex = new GLTextureObject(new Bitmap(GetAbsolutePath("output0106.png")));
-			this.inputTex.TextureUnit = TextureUnit.Texture0;
+			this.inputTex.TextureUnit = TextureUnit.Texture8;
 
 			texManager = new TextureManager(new Rectangle(0, 0, 512, 512), new string[] { "Sum", "SumSq", "StdDev" });
 
