@@ -3,6 +3,7 @@
 using System;
 using System.IO;
 using System.Drawing;
+using System.Collections.Generic;
 
 using OpenTK;
 using OpenTK.Graphics;
@@ -26,6 +27,12 @@ namespace BackSub
 		GLTextureObject inputTex;
 		TextureManager texManager;
 		GLVisibleFrameBufferObject visibleFbo;
+		
+		const int WIDTH = 1024;
+		const int HEIGHT = 1024;
+		const int INPUT_WIDTH = 640;
+		const int INPUT_HEIGHT = 480;
+		
 		/// <summary>Load resources here.</summary>
 		/// <param name="e">Not used.</param>
 		protected override void OnLoad(EventArgs e)
@@ -40,14 +47,82 @@ namespace BackSub
 
 			this.shader = new GLShader(File.ReadAllText(GetAbsolutePath("shader.vert")), File.ReadAllText(GetAbsolutePath("calibrate.frag")));
 
-			this.inputTex = new GLTextureObject(new Bitmap(GetAbsolutePath("output0106.png")));
-			this.inputTex.TextureUnit = TextureUnit.Texture8;
+			texManager = new TextureManager(new Rectangle(0, 0, WIDTH, HEIGHT), new string[] { "Sum", "SumSq", "StdDev" });
 
-			texManager = new TextureManager(new Rectangle(0, 0, 512, 512), new string[] { "Sum", "SumSq", "StdDev" });
-
-			visibleFbo = new GLVisibleFrameBufferObject(new Rectangle(0, 0, 512, 512));
+			visibleFbo = new GLVisibleFrameBufferObject(new Rectangle(0, 0, WIDTH, HEIGHT));
 			visibleFbo.Bind();
-
+			
+			// Set up render loop actions
+			RenderActions = new List<Action>();
+			const int frameCount = 60;
+			for (int j = 0; j < frameCount; j++) {
+				// Load the background frame
+				Action<int> temp = (i) => {
+					Console.WriteLine("Loading BkgndFrame {0}",i);
+					if(this.inputTex != null)
+						this.inputTex.Dispose();
+					this.inputTex = new GLTextureObject(new Bitmap(GetAbsolutePath(String.Format("calib_img/big{0}.png",i+100))));
+					this.inputTex.TextureUnit = TextureUnit.Texture8;
+					this.inputTex.Bind();
+				};
+				this.RenderActions.Add(temp.Curry(j));
+				
+				// Process it for sum (average)
+				temp = (i) => {
+					this.texManager.Bind();
+					Console.WriteLine("Sum");
+					
+					this.shader.SetUniform("FrameTx", this.inputTex.TextureUnit);
+					this.shader.SetUniform("SumTx", texManager.GetTexture("Sum").TextureUnit);
+					this.shader.SetUniform("Mode", 1);
+					this.shader.SetUniform("NumFrames", (float)frameCount);
+		
+					RenderToFramebuffer();
+		
+					texManager.EndRender("Sum");
+				};
+				this.RenderActions.Add(temp.Curry(j));
+				
+				// Display sum!
+				//this.RenderActions.Add(() => RenderTexToScreen(this.texManager.GetTexture("Sum")));
+				// Sleep 1
+				//this.RenderActions.Add(() => System.Threading.Thread.Sleep(100));
+				
+				// Process it for SumSq
+				temp = (i) => {
+					this.texManager.Bind();
+					Console.WriteLine("SumSq");
+					
+					this.shader.SetUniform("FrameTx", this.inputTex.TextureUnit);
+					this.shader.SetUniform("SumSqTx", texManager.GetTexture("SumSq").TextureUnit);
+					this.shader.SetUniform("Mode", 2);
+					this.shader.SetUniform("NumFrames", (float)frameCount);
+		
+					RenderToFramebuffer();
+		
+					texManager.EndRender("SumSq");
+				};
+				this.RenderActions.Add(temp.Curry(j));
+			}
+			
+			/*for (int j = 0; j < frameCount; j++) {
+				// Take the StdDev now that we have the sum and sumsq
+				Action<int> temp = (i) => {
+					this.texManager.Bind();
+					Console.WriteLine("StdDev {0}",i);
+					
+					//this.shader.SetUniform("FrameTx", this.inputTex.TextureUnit);
+					this.shader.SetUniform("SumTx", texManager.GetTexture("Sum").TextureUnit);
+					this.shader.SetUniform("SumSqTx", texManager.GetTexture("Sum").TextureUnit);
+					this.shader.SetUniform("Mode", 3);
+					this.shader.SetUniform("NumFrames", (float)frameCount);
+		
+					RenderToFramebuffer();
+		
+					texManager.EndRender("StdDev");
+				};
+				this.RenderActions.Add(temp.Curry(j));
+			}*/
 		}
 		
 		/// <summary>
@@ -77,7 +152,7 @@ namespace BackSub
 			//GL.Viewport(ClientRectangle.X, ClientRectangle.Y, ClientRectangle.Width, ClientRectangle.Height);
 
 			//Matrix4 projection = Matrix4.CreatePerspectiveFieldOfView((float)Math.PI / 4, Width / (float)Height, 1.0f, 64.0f);
-			Matrix4 projection = Matrix4.CreateOrthographicOffCenter(-1, 1, -1, 1, 1, 64);
+			Matrix4 projection = Matrix4.CreateOrthographicOffCenter(0, 1, 0, 1, 1, 64);
 			GL.MatrixMode(MatrixMode.Projection);
 			GL.LoadMatrix(ref projection);
 		}
@@ -94,6 +169,24 @@ namespace BackSub
 
 				Exit();
 		}
+		
+		private void RenderToFramebuffer()
+		{
+			GL.Begin(BeginMode.Quads);
+	
+			float sw = (float)INPUT_WIDTH / WIDTH;
+			float sh = (float)INPUT_HEIGHT / HEIGHT;
+			
+			GL.TexCoord2(0f,0f);  GL.Color3(0.0f, 0.0f, 0.0f); GL.Vertex3(0f, 0f, -4.0f);
+			GL.TexCoord2(sw,0f);  GL.Color3(0.0f, 0.0f, 0.0f); GL.Vertex3(sw, 0f, -4.0f);
+			GL.TexCoord2(sw,sh);  GL.Color3(0.0f, 0.0f, 0.0f); GL.Vertex3(sw, sh, -4.0f);
+			GL.TexCoord2(0f,sh);  GL.Color3(0.0f, 0.0f, 0.0f); GL.Vertex3(0f, sh, -4.0f);
+			
+			GL.End();	
+		}
+		
+		private IList<Action> RenderActions;
+		
 		/// <summary>
 		/// Called when it is time to render the next frame. Add your rendering code here.
 		/// </summary>
@@ -102,54 +195,34 @@ namespace BackSub
 		{
 			base.OnRenderFrame(e);
 
-			//Matrix4 modelview = Matrix4.LookAt(Vector3.Zero, Vector3.UnitZ, Vector3.UnitY);
+			// Set up modelview matrix
 			Matrix4 modelview = Matrix4.Identity;
 			GL.MatrixMode(MatrixMode.Modelview);
 			GL.LoadMatrix(ref modelview);
-
-			//Render texture to texture
-			this.texManager.Bind();
 			
-			GL.ClearColor(0.0f, 0.0f, 1.0f, 0.0f);
-			GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);	
-
-			this.inputTex.Bind();
-			this.shader.SetUniform("FrameTx", inputTex.TextureUnit);
-			this.shader.SetUniform("SumTx", texManager.GetTexture("Sum").TextureUnit);
-			this.shader.SetUniform("Mode", 1);
-			this.shader.SetUniform("NumFrames", 1.0f);
-
-			GL.Begin(BeginMode.Quads);
-
-			GL.TexCoord2(0, 0);  GL.Color3(0.0f, 0.0f, 0.0f); GL.Vertex3(-0.9f, -0.9f, -4.0f);
-			GL.TexCoord2(1, 0);  GL.Color3(1.0f, 0.0f, 0.0f); GL.Vertex3(0.9f, -0.9f, -4.0f);
-			GL.TexCoord2(1, 1);  GL.Color3(0.0f, 1.0f, 0.0f); GL.Vertex3(0.9f, 0.9f, -4.0f);
-			GL.TexCoord2(0, 1);  GL.Color3(0.0f, 0.0f, 1.0f); GL.Vertex3(-0.9f, 0.9f, -4.0f);
-
-			GL.End();
-
-			texManager.EndRender("Sum");
-
+			// Pop a function from the list and execute it
+			if(RenderActions.Count > 0)
+			{
+				RenderActions[0]();
+				RenderActions.RemoveAt(0);
+			}
+			else
+			{
+				// default function
+				RenderTexToScreen(this.texManager.GetTexture("SumSq"));
+			}
+		}
+		
+		private void RenderTexToScreen(GLTextureObject tex)
+		{
 			this.visibleFbo.Bind();
-
 			//Render texture to screen
 			GL.ClearColor(0.0f, 1.0f, 0.0f, 0.0f);
 			GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
-
-			this.texManager.GetTexture("Sum").Bind();
-			this.shader.SetUniform("FrameTx", texManager.GetTexture("Sum").TextureUnit);
+			tex.Bind();
+			this.shader.SetUniform("FrameTx", tex.TextureUnit);
 			this.shader.SetUniform("Mode", 0);
-			//this.shader.SetUniform("NumFrames", 1.0f);
-			
-			GL.Begin(BeginMode.Quads);
-
-			GL.TexCoord2(0, 0);  GL.Color3(0.0f, 0.0f, 0.0f); GL.Vertex3(-0.9f, -0.9f, -4.0f);
-			GL.TexCoord2(1, 0);  GL.Color3(1.0f, 0.0f, 0.0f); GL.Vertex3(0.9f, -0.9f, -4.0f);
-			GL.TexCoord2(1, 1);  GL.Color3(0.0f, 1.0f, 0.0f); GL.Vertex3(0.9f, 0.9f, -4.0f);
-			GL.TexCoord2(0, 1);  GL.Color3(0.0f, 0.0f, 1.0f); GL.Vertex3(-0.9f, 0.9f, -4.0f);
-			
-			GL.End();
-			
+			RenderToFramebuffer();
 			SwapBuffers();
 		}
 
@@ -167,5 +240,18 @@ namespace BackSub
 				game.Run(30.0);
 			}
 		}
+	}
+	
+	enum RenderSteps
+	{
+			
+	}
+}
+
+public static class Extensions
+{
+	public static Action Curry<T>(this Action<T> act, T val)
+	{
+		return () => act(val);
 	}
 }
