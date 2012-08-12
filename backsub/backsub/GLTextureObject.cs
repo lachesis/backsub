@@ -15,17 +15,20 @@ namespace BackSub
 		public int TextureId { get { return _id; } }
 		public TextureUnit TextureUnit { get; set; }
 		private int _id;
+		public Size Size { get; private set; }
 
-		public GLTextureObject(Size size) : this(size, null, 1) { }
-		public GLTextureObject(Bitmap bitmap) : this(null, bitmap, 1) { }
-		public GLTextureObject(Bitmap bitmap, int numMipMapLevels) : this(null, bitmap, numMipMapLevels) { }
-		private GLTextureObject(Size? size, Bitmap bitmap, int numMipMapLevels)
+		public GLTextureObject(Size size) : this(size, PixelInternalFormat.Rgba) { }
+		public GLTextureObject(Size size, PixelInternalFormat internalFormat) : this(size, null, 1, internalFormat) { }
+		public GLTextureObject(Bitmap bitmap) : this(null, bitmap, 1, PixelInternalFormat.Rgba) { }
+		public GLTextureObject(Bitmap bitmap, int numMipMapLevels, PixelInternalFormat internalFormat) : this(null, bitmap, numMipMapLevels, internalFormat) { }
+		private GLTextureObject(Size? size, Bitmap bitmap, int numMipMapLevels, PixelInternalFormat internalFormat)
 		{
 			if (size != null && bitmap != null) throw new ArgumentException("Can not pass size and bitmap!");
 			if (size != null)
 			{
 				bitmap = makeBitmap(size.Value);
 			}
+			this.Size = bitmap.Size;
 			_id = GL.GenTexture();
 			this.TextureUnit = TextureUnit.Texture0;
 			GL.ActiveTexture(this.TextureUnit);
@@ -40,7 +43,7 @@ namespace BackSub
 				//Load currentBitmap
 				BitmapData currentData = currentBitmap.LockBits(new System.Drawing.Rectangle(0, 0, currentBitmap.Width, currentBitmap.Height),
 					ImageLockMode.ReadOnly, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
-				GL.TexImage2D(TextureTarget.Texture2D, i, PixelInternalFormat.Rgba, currentSize.Width, currentSize.Height, 0,
+				GL.TexImage2D(TextureTarget.Texture2D, i, internalFormat, currentSize.Width, currentSize.Height, 0,
 					OpenTK.Graphics.OpenGL.PixelFormat.Bgra, PixelType.UnsignedByte, currentData.Scan0);
 
 				currentBitmap.UnlockBits(currentData);
