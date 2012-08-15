@@ -63,6 +63,18 @@ namespace BackSub
 				bitmap.Dispose();
 			}
 		}
+		
+		public Bitmap GetBitmapOfTexture()
+		{
+			this.Bind();
+			Bitmap currentBitmap = new Bitmap(Size.Width, Size.Height);
+			BitmapData currentData = currentBitmap.LockBits(new System.Drawing.Rectangle(0, 0, currentBitmap.Width, currentBitmap.Height),
+					ImageLockMode.WriteOnly, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+			GL.GetTexImage(TextureTarget.Texture2D, 0, OpenTK.Graphics.OpenGL.PixelFormat.Bgra, PixelType.UnsignedByte, currentData.Scan0);
+			currentBitmap.UnlockBits(currentData);
+			currentBitmap.RotateFlip(RotateFlipType.RotateNoneFlipY);
+			return currentBitmap;
+		}
 
 		private static Bitmap scaleBitmap(Bitmap source, Size outSize)
 		{

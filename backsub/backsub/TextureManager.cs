@@ -24,7 +24,7 @@ namespace BackSub
 			for (int i = 0; i < texNames.Count; i++)
 			{
 				this.textureNames.Add(texNames[i], TextureUnit.Texture0 + i);
-				curr = new GLTextureObject(viewport.Size);
+				curr = new GLTextureObject(viewport.Size, PixelInternalFormat.Rgb32f);
 				curr.TextureUnit = TextureUnit.Texture0 + i;
 				this.textures.Add(texNames[i], new KeyValuePair<GLTextureObject, FramebufferAttachment>(curr, FramebufferAttachment.ColorAttachment0 + i));
 				Fbo.AttachTexture2D(FramebufferAttachment.ColorAttachment0 + i, curr.TextureId);
