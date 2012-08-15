@@ -11,7 +11,12 @@ using System.Runtime.InteropServices;
 
 namespace BackSub
 {
-	public class Camera
+	public interface ICamera
+	{
+		bool UpdateTexture();
+		void Start();
+	}
+	public class Camera : ICamera
 	{
 		private Capture _capture;
 		private object _lockObject = new object();
