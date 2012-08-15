@@ -116,7 +116,7 @@ namespace BackSub
 				this.RenderActions.Add(temp.Curry(j));
 			}
 			
-			/*for (int j = 0; j < frameCount; j++) {
+			{
 				// Take the StdDev now that we have the sum and sumsq
 				Action<int> temp = (i) => {
 					this.texManager.Bind();
@@ -132,8 +132,8 @@ namespace BackSub
 		
 					texManager.EndRender("StdDev");
 				};
-				this.RenderActions.Add(temp.Curry(j));
-			}*/
+				this.RenderActions.Add(temp.Curry(1));
+			}
 		}
 		
 		/// <summary>
@@ -220,7 +220,7 @@ namespace BackSub
 			else
 			{
 				// default function
-				RenderTexToScreen(this.texManager.GetTexture("Sum"));
+				RenderTexToScreen(this.texManager.GetTexture("StdDev"));
 			}
 		}
 		
