@@ -14,9 +14,9 @@ for idx in xrange(100,100+FRAMES):
     for x in xrange(0,640):
         for y in xrange(0,480):
             p = pa[x,y]
-            avgd[(x,y)][0] += p[0] / float(FRAMES)
-            avgd[(x,y)][1] += p[1] / float(FRAMES)
-            avgd[(x,y)][2] += p[2] / float(FRAMES)
+            avgd[(x,y)][0] += (p[0] / float(FRAMES)) ** 2
+            avgd[(x,y)][1] += (p[1] / float(FRAMES)) ** 2
+            avgd[(x,y)][2] += (p[2] / float(FRAMES)) ** 2
 
 avgi = i.copy()         
 pa = avgi.load()
@@ -24,5 +24,5 @@ for x in xrange(0,640):
     for y in xrange(0,480):
         a = avgd[(x,y)]
         pa[x,y] = tuple([int(q) for q in a])
-avgi.save('average.png')
+avgi.save('sumsq.png')
 

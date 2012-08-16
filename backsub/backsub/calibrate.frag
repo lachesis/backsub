@@ -16,6 +16,9 @@ void main()
 		gl_FragColor = samp(SumTx) + samp(FrameTx) / NumFrames;
 	if(Mode == 2) // SumSquares of scaled values
 		gl_FragColor = samp(SumSqTx) + sq(samp(FrameTx))/NumFrames;
+	//if(Mode == 2) // SumSqVar
+	//	gl_FragColor = samp(SumSqTx) + sq(samp(FrameTx) - samp(SumTx));
 	if(Mode == 3) // StdDev of scaled values
 		gl_FragColor = sqrt(samp(SumSqTx) - sq(samp(SumTx)));
+	//	gl_FragColor = sqrt(samp(SumSqTx) / NumFrames);
 }

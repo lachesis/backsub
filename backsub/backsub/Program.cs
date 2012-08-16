@@ -57,7 +57,7 @@ namespace BackSub
 			visibleFbo = new GLVisibleFrameBufferObject(new Rectangle(0, 0, WIDTH, HEIGHT));
 			visibleFbo.Bind();
 			
-			const int frameCount = 60;
+			const int frameCount = 20;
 			
 			// Create camera
 			camera = new FileCamera(
@@ -93,18 +93,17 @@ namespace BackSub
 					texManager.EndRender("Sum");
 				};
 				this.RenderActions.Add(temp.Curry(j));
-				
-				// Display sum!
-				//this.RenderActions.Add(() => RenderTexToScreen(this.texManager.GetTexture("Sum")));
-				// Sleep 1
-				//this.RenderActions.Add(() => System.Threading.Thread.Sleep(100));
-				
+			}
+
+			// Second pass
+			for (int j = 0; j < frameCount; j++) {
 				// Process it for SumSq
-				temp = (i) => {
+				Action<int> temp = (i) => {
 					this.texManager.Bind();
 					Console.WriteLine("SumSq");
 					
 					this.shader.SetUniform("FrameTx", this.inputTex.TextureUnit);
+					this.shader.SetUniform("SumTx", texManager.GetTexture("Sum").TextureUnit);
 					this.shader.SetUniform("SumSqTx", texManager.GetTexture("SumSq").TextureUnit);
 					this.shader.SetUniform("Mode", 2);
 					this.shader.SetUniform("NumFrames", (float)frameCount);
@@ -115,16 +114,17 @@ namespace BackSub
 				};
 				this.RenderActions.Add(temp.Curry(j));
 			}
-			
+
+			// Final step (stddev)
 			{
 				// Take the StdDev now that we have the sum and sumsq
-				Action<int> temp = (i) => {
+				Action temp = () => {
 					this.texManager.Bind();
-					Console.WriteLine("StdDev {0}",i);
+					Console.WriteLine("StdDev");
 					
 					//this.shader.SetUniform("FrameTx", this.inputTex.TextureUnit);
 					this.shader.SetUniform("SumTx", texManager.GetTexture("Sum").TextureUnit);
-					this.shader.SetUniform("SumSqTx", texManager.GetTexture("Sum").TextureUnit);
+					this.shader.SetUniform("SumSqTx", texManager.GetTexture("SumSq").TextureUnit);
 					this.shader.SetUniform("Mode", 3);
 					this.shader.SetUniform("NumFrames", (float)frameCount);
 		
@@ -132,7 +132,7 @@ namespace BackSub
 		
 					texManager.EndRender("StdDev");
 				};
-				this.RenderActions.Add(temp.Curry(1));
+				this.RenderActions.Add(temp);
 			}
 		}
 		
@@ -221,8 +221,12 @@ namespace BackSub
 			{
 				// default function
 				RenderTexToScreen(this.texManager.GetTexture("StdDev"));
+				if(!dumped)
+					this.texManager.GetTexture("StdDev").GetBitmapOfTexture().Save("/tmp/stdev-gl.png");
+				dumped = true;
 			}
 		}
+		private bool dumped;
 		
 		private void RenderTexToScreen(GLTextureObject tex)
 		{
