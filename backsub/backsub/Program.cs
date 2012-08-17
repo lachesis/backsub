@@ -93,17 +93,13 @@ namespace BackSub
 					texManager.EndRender("Sum");
 				};
 				this.RenderActions.Add(temp.Curry(j));
-			}
 
-			// Second pass
-			for (int j = 0; j < frameCount; j++) {
 				// Process it for SumSq
-				Action<int> temp = (i) => {
+				temp = (i) => {
 					this.texManager.Bind();
 					Console.WriteLine("SumSq");
 					
 					this.shader.SetUniform("FrameTx", this.inputTex.TextureUnit);
-					this.shader.SetUniform("SumTx", texManager.GetTexture("Sum").TextureUnit);
 					this.shader.SetUniform("SumSqTx", texManager.GetTexture("SumSq").TextureUnit);
 					this.shader.SetUniform("Mode", 2);
 					this.shader.SetUniform("NumFrames", (float)frameCount);
