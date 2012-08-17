@@ -47,6 +47,9 @@ namespace BackSub
 			GL.Enable(EnableCap.Texture2D);
 			GL.Enable(EnableCap.CullFace);
 			GL.CullFace(CullFaceMode.Back);
+
+			GL.ClampColor(ClampColorTarget.ClampFragmentColor, ClampColorMode.False);
+			GL.ClampColor(ClampColorTarget.ClampReadColor, ClampColorMode.False);
 			
 			//new GLTextureObject(new Bitmap(GetAbsolutePath("calib_img/big100.png"))).GetBitmapOfTexture().Save("/tmp/big100.bmp");
 
@@ -65,7 +68,7 @@ namespace BackSub
 				new Size(WIDTH,HEIGHT)
 			);
 			this.inputTex = camera.Texture;
-			
+
 			// Set up render loop actions
 			RenderActions = new List<Action>();
 			for (int j = 0; j < frameCount; j++) {
@@ -111,7 +114,6 @@ namespace BackSub
 				this.RenderActions.Add(temp.Curry(j));
 			}
 
-			
 			// stddev
 			{
 				// Take the StdDev now that we have the sum and sumsq
@@ -157,7 +159,7 @@ namespace BackSub
 		
 					RenderToFramebuffer();
 		
-					texManager.EndRender("Intermed");
+					texManager.EndRender("AiBi");
 				};
 				this.RenderActions.Add(temp.Curry(j));
 			}
@@ -180,6 +182,25 @@ namespace BackSub
 				};
 				this.RenderActions.Add(temp);
 			}
+
+			// calculate Ai,Bi,Ci,Di
+			/*{
+				Action temp = () => {
+					this.texManager.Bind();
+					Console.WriteLine("AiBi");
+					
+					this.shader.SetUniform("FrameTx", this.inputTex.TextureUnit);
+					this.shader.SetUniform("SumTx", texManager.GetTexture("Sum").TextureUnit);
+					this.shader.SetUniform("StdDevTx", texManager.GetTexture("StdDev").TextureUnit);
+					this.shader.SetUniform("Mode", 6);
+					this.shader.SetUniform("NumFrames", (float)frameCount);
+		
+					RenderToFramebuffer();
+		
+					texManager.EndRender("AiBi");
+				};
+				this.RenderActions.Add(temp);
+			}*/
 		}
 		
 		/// <summary>
