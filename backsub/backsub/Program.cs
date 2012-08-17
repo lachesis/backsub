@@ -42,7 +42,7 @@ namespace BackSub
 		{
 			base.OnLoad(e);
 
-			GL.ClearColor(0.1f, 0.2f, 0.5f, 0.0f);
+			GL.ClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 			GL.Enable(EnableCap.DepthTest);
 			GL.Enable(EnableCap.Texture2D);
 			GL.Enable(EnableCap.CullFace);
@@ -52,7 +52,7 @@ namespace BackSub
 
 			this.shader = new GLShader(File.ReadAllText(GetAbsolutePath("shader.vert")), File.ReadAllText(GetAbsolutePath("calibrate.frag")));
 
-			texManager = new TextureManager(new Rectangle(0, 0, WIDTH, HEIGHT), new string[] { "Sum", "SumSq", "StdDev" });
+			texManager = new TextureManager(new Rectangle(0, 0, WIDTH, HEIGHT), new string[] { "Sum", "Intermed", "StdDev", "AiBi" });
 
 			visibleFbo = new GLVisibleFrameBufferObject(new Rectangle(0, 0, WIDTH, HEIGHT));
 			visibleFbo.Bind();
@@ -93,29 +93,26 @@ namespace BackSub
 					texManager.EndRender("Sum");
 				};
 				this.RenderActions.Add(temp.Curry(j));
-			}
 
-			// Second pass
-			for (int j = 0; j < frameCount; j++) {
 				// Process it for SumSq
-				Action<int> temp = (i) => {
+				temp = (i) => {
 					this.texManager.Bind();
 					Console.WriteLine("SumSq");
 					
 					this.shader.SetUniform("FrameTx", this.inputTex.TextureUnit);
-					this.shader.SetUniform("SumTx", texManager.GetTexture("Sum").TextureUnit);
-					this.shader.SetUniform("SumSqTx", texManager.GetTexture("SumSq").TextureUnit);
+					this.shader.SetUniform("IntermedTx", texManager.GetTexture("Intermed").TextureUnit);
 					this.shader.SetUniform("Mode", 2);
 					this.shader.SetUniform("NumFrames", (float)frameCount);
 		
 					RenderToFramebuffer();
 		
-					texManager.EndRender("SumSq");
+					texManager.EndRender("Intermed");
 				};
 				this.RenderActions.Add(temp.Curry(j));
 			}
 
-			// Final step (stddev)
+			
+			// stddev
 			{
 				// Take the StdDev now that we have the sum and sumsq
 				Action temp = () => {
@@ -124,13 +121,62 @@ namespace BackSub
 					
 					//this.shader.SetUniform("FrameTx", this.inputTex.TextureUnit);
 					this.shader.SetUniform("SumTx", texManager.GetTexture("Sum").TextureUnit);
-					this.shader.SetUniform("SumSqTx", texManager.GetTexture("SumSq").TextureUnit);
+					this.shader.SetUniform("IntermedTx", texManager.GetTexture("Intermed").TextureUnit);
 					this.shader.SetUniform("Mode", 3);
 					this.shader.SetUniform("NumFrames", (float)frameCount);
 		
 					RenderToFramebuffer();
 		
 					texManager.EndRender("StdDev");
+				};
+				this.RenderActions.Add(temp);
+			}
+
+			// Second pass for alfi sum
+			for (int j = 0; j < frameCount; j++) {
+				// Load the background frame
+				Action<int> temp = (i) => {
+					Console.WriteLine("Loading BkgndFrame {0}",i);
+					//this.inputTex.Bind();
+					camera.UpdateTexture();
+					//camera.Texture.GetBitmapOfTexture().Save("/tmp/out.bmp");
+				};
+				this.RenderActions.Add(temp.Curry(j));
+				
+				// Calculate AlfI (xi-1)**2/N and CDi sum
+				temp = (i) => {
+					this.texManager.Bind();
+					Console.WriteLine("AlfISum");
+					
+					this.shader.SetUniform("FrameTx", this.inputTex.TextureUnit);
+					this.shader.SetUniform("SumTx", texManager.GetTexture("Sum").TextureUnit);
+					this.shader.SetUniform("StdDevTx", texManager.GetTexture("StdDev").TextureUnit);
+					this.shader.SetUniform("IntermedTx", texManager.GetTexture("Intermed").TextureUnit);
+					this.shader.SetUniform("Mode", 4);
+					this.shader.SetUniform("NumFrames", (float)frameCount);
+		
+					RenderToFramebuffer();
+		
+					texManager.EndRender("Intermed");
+				};
+				this.RenderActions.Add(temp.Curry(j));
+			}
+
+			// calculate ai and bi
+			{
+				// Take ai and bi now that we have the intermed sums
+				Action temp = () => {
+					this.texManager.Bind();
+					Console.WriteLine("AiBi");
+					
+					//this.shader.SetUniform("FrameTx", this.inputTex.TextureUnit);
+					this.shader.SetUniform("IntermedTx", texManager.GetTexture("Intermed").TextureUnit);
+					this.shader.SetUniform("Mode", 5);
+					this.shader.SetUniform("NumFrames", (float)frameCount);
+		
+					RenderToFramebuffer();
+		
+					texManager.EndRender("AiBi");
 				};
 				this.RenderActions.Add(temp);
 			}
@@ -177,7 +223,6 @@ namespace BackSub
 			base.OnUpdateFrame(e);
 
 			if (Keyboard[Key.Escape])
-
 				Exit();
 		}
 		
@@ -193,7 +238,7 @@ namespace BackSub
 			GL.TexCoord2(sw,sh);  GL.Color3(0.0f, 0.0f, 0.0f); GL.Vertex3(sw, sh, -4.0f);
 			GL.TexCoord2(0f,sh);  GL.Color3(0.0f, 0.0f, 0.0f); GL.Vertex3(0f, sh, -4.0f);
 			
-			GL.End();	
+			GL.End();
 		}
 		
 		private IList<Action> RenderActions;
@@ -220,19 +265,19 @@ namespace BackSub
 			else
 			{
 				// default function
-				RenderTexToScreen(this.texManager.GetTexture("StdDev"));
-				if(!dumped)
+				RenderTexToScreen(this.texManager.GetTexture("AiBi"));
+				/*if(!dumped)
 					this.texManager.GetTexture("StdDev").GetBitmapOfTexture().Save("/tmp/stdev-gl.png");
-				dumped = true;
+				dumped = true;*/
 			}
 		}
-		private bool dumped;
+		//private bool dumped;
 		
 		private void RenderTexToScreen(GLTextureObject tex)
 		{
 			this.visibleFbo.Bind();
 			//Render texture to screen
-			GL.ClearColor(0.0f, 1.0f, 0.0f, 0.0f);
+			GL.ClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 			GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 			tex.Bind();
 			this.shader.SetUniform("FrameTx", tex.TextureUnit);

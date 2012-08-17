@@ -23,8 +23,11 @@ namespace BackSub
 		}
 
 		protected int GetUniformLocation(string name)
-		{
-			return GL.GetUniformLocation(ProgramId, name);
+		{	
+			var rv = GL.GetUniformLocation(ProgramId, name);
+			if(rv == -1)
+				throw new ArgumentException(String.Format("Uniform {0} not available in program",name));
+			return rv;
 		}
 
 		#region SetUniform
