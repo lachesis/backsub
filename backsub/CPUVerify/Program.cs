@@ -29,13 +29,34 @@ namespace CPUVerify
 		public float B;
 		public System.Drawing.Color ToDrawingColor()
 		{
-			return System.Drawing.Color.FromArgb(255, (int)(clip(R) * 255f), (int)(clip(G) * 255f), (int)(clip(B) * 255f));
+			clip();
+			return System.Drawing.Color.FromArgb(255, (int)(R * 255f), (int)(G * 255f), (int)(B * 255f));
 		}
 		private float clip(float value)
 		{
-			if (value > 1) return 1;
-			if (value < 0) return 0;
+			if (value > 1) 
+				return 1;
+			if (value < 0) 
+				return 0;
 			return value;
+		}
+		private void clip()
+		{
+			if ( float.IsNaN(R) || float.IsNaN(G) || float.IsNaN(B))
+			{
+				R = G = 1;
+				B = 0;
+			}
+			if (R < 0 || G < 0 || B < 0)
+			{
+				B = 1;
+				G = R = 0;
+			}
+			if (R > 1 || G > 1 || B > 1)
+			{
+				R = 1;
+				G = B = 0;
+			}
 		}
 	}
 
@@ -48,7 +69,7 @@ namespace CPUVerify
 			UnmanagedImage image = info.Image;
 			for (int x = 0; x < bitmap.Width; x++)
 			{
-				for (int y = 0; y < bitmap.Width; y++)
+				for (int y = 0; y < bitmap.Height; y++)
 				{
 					image.SetPixel(x, y, colors[x, y].ToDrawingColor());
 				}
@@ -109,11 +130,11 @@ namespace CPUVerify
 
 			//Create output image
 			Color[,] output = new Color[images.First().Bitmap.Width, images.First().Bitmap.Height];
-			string mode = args.Length >= 2 ? args[1].Trim().ToLower() : "stddev";
+			string mode = args.Length >= 2 ? args[1].Trim().ToLower() : "bi";
 			for (int x = 0; x < output.GetLength(0); x++)
 			{
 				if (x % 10 == 0) Console.WriteLine(string.Format("Processing Column {0}...", x));
-				for (int y = 0; y < output.GetLength(0); y++)
+				for (int y = 0; y < output.GetLength(1); y++)
 				{
 					output[x, y] = ProcessPixel(mode, images.GetPixel(x, y).ToArray());
 				}
@@ -135,9 +156,13 @@ namespace CPUVerify
 				.ToList();
 		}
 
-		static public Color ProcessPixel(string mode, IEnumerable<Color> values)
+		static public Color ProcessPixel(string mode, Color[] values)
 		{
+			int n = values.Length;
 			Color ret;
+			Color mean;
+			Color stddev;
+			float temp;
 			switch (mode)
 			{
 				case "mean":
@@ -147,18 +172,93 @@ namespace CPUVerify
 					ret.B = values.GetBChannel().Average();
 					return ret;
 				case "stddev":
-					Color mean = ProcessPixel("mean", values);
+					mean = ProcessPixel("mean", values);
 					ret = new Color();
 					ret.R = values.GetRChannel().Select(i => (float)Math.Pow(i - mean.R, 2)).Average();
-					ret.R = (float)Math.Sqrt(ret.R) * 50;
+					ret.R = (float)Math.Sqrt(ret.R);
+					if (ret.R < .000001) ret.R = .000001f;
 					ret.G = values.GetGChannel().Select(i => (float)Math.Pow(i - mean.G, 2)).Average();
-					ret.G = (float)Math.Sqrt(ret.G) * 50;
+					ret.G = (float)Math.Sqrt(ret.G);
+					if (ret.G < .000001) ret.G = .000001f;
 					ret.B = values.GetBChannel().Select(i => (float)Math.Pow(i - mean.B, 2)).Average();
-					ret.B = (float)Math.Sqrt(ret.B) * 50;
+					ret.B = (float)Math.Sqrt(ret.B);
+					if (ret.B < .000001) ret.B = .000001f;
 					return ret;
+				case "xi":
+				{
+					mean = ProcessPixel("mean", values);
+					stddev = ProcessPixel("stddev", values);
+					ret = new Color();
+					temp = xi(values[0], mean, stddev);
+					ret.R = ret.G = ret.B = temp;
+					return ret;
+				}
+				case "CDi":
+				{
+					mean = ProcessPixel("mean", values);
+					stddev = ProcessPixel("stddev", values);
+					float Xi = ProcessPixel("xi", values).R;
+					Func<Color, Color, Color, float, float> func =
+						(I, U, Sig, xi) =>
+						{
+							return (float)Math.Sqrt(
+								(float)Math.Pow((I.R - xi * U.R) / Sig.R, 2)
+								+ (float)Math.Pow((I.G - xi * U.G) / Sig.G, 2)
+								+ (float)Math.Pow((I.B - xi * U.B) / Sig.B, 2));
+						};
+					ret = new Color();
+					temp = func(values[0], mean, stddev, Xi) / 10;
+					ret.R = ret.G = ret.B = temp;
+					return ret;
+				}
+				case "bi":
+				{
+					mean = ProcessPixel("mean", values);
+					stddev = ProcessPixel("stddev", values);
+					Func<Color, Color, Color, float, float> func =
+						(I, U, Sig, xi) =>
+						{
+							return (float)Math.Sqrt(
+								(float)Math.Pow((I.R - xi * U.R) / Sig.R, 2)
+								+ (float)Math.Pow((I.G - xi * U.G) / Sig.G, 2)
+								+ (float)Math.Pow((I.B - xi * U.B) / Sig.B, 2));
+						};
+					ret = new Color();
+					temp = values
+						.Select(i => new Tuple<Color, Color, Color, float>(i, mean, stddev, xi(i, mean, stddev)))
+						.Select(i => func(i.Item1, i.Item2, i.Item3, i.Item4))
+						.Sum(i => (float)Math.Pow(i, 2));
+					temp = (float)Math.Sqrt(temp / n) / 10;
+					ret.R = ret.G = ret.B = temp;
+					return ret;
+				}
+				case "ai":
+				{
+					mean = ProcessPixel("mean", values);
+					stddev = ProcessPixel("stddev", values);
+					ret = new Color();
+					temp = values
+						.Select(i => new Tuple<Color, Color, Color>(i, mean, stddev))
+						.Select(i => xi(i.Item1, i.Item2, i.Item3))
+						.Sum(i => (float)Math.Pow(i - 1f, 2));
+					temp = (float)Math.Sqrt(temp / n);
+					//temp = temp / n;
+					ret.R = ret.G = ret.B = temp;
+					return ret;
+				}
 				default:
 					throw new System.Exception("The passed mode was not valid!!");
 			}
+		}
+
+		private static float xi(Color I, Color U, Color Sig)
+		{
+			return ((I.B * U.B) / (float)Math.Pow(Sig.B, 2) +
+					(I.G * U.G) / (float)Math.Pow(Sig.G, 2) +
+					(I.R * U.R) / (float)Math.Pow(Sig.R, 2)) /
+			((float)Math.Pow(U.B, 2) / (float)Math.Pow(Sig.B, 2) +
+				(float)Math.Pow(U.G, 2) / (float)Math.Pow(Sig.G, 2) +
+				(float)Math.Pow(U.R, 2) / (float)Math.Pow(Sig.R, 2));
 		}
 
 		/// <summary>
